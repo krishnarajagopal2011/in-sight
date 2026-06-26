@@ -6,6 +6,7 @@ Everything is plain YAML — edit in any text editor.
 
 | File | Drives | Edit this to… |
 |------|--------|----------------|
+| [`projects.yaml`](projects.example.yaml) | Projects screen (local provider) | list your parallel projects + top tasks (no account needed) |
 | [`fitness.yaml`](fitness.yaml) | Today's movement | change gym/yoga/pickleball times per weekday |
 | [`food.yaml`](food.yaml) | Next meal · tonight's dal soak | adjust the meal plan, dal rotation, or the Phase 1 `kickstart` day |
 | [`house.yaml`](house.yaml) | Today's house tasks (by time of day) | re-assign chores to different days/times |
@@ -13,8 +14,10 @@ Everything is plain YAML — edit in any text editor.
 | [`health.yaml`](health.yaml) | Remission phase, targets, safety, log nudges | set your phase, start date, weight/HbA1c targets, checkpoints |
 | [`meal-plan.md`](meal-plan.md) | (reference) | the full plan + blood-sugar & remission protocol |
 
-The **Projects screen** is separate — it's driven live by dVerse central command,
-configured in [`../config/config.yaml`](../config/config.yaml).
+The **Projects screen** source is pluggable (set `dverse.provider` in
+[`../config/config.yaml`](../config/config.yaml)): `local` reads your own
+`projects.yaml` here (the default — no account); `dverse` syncs live from a dVerse
+central-command portal.
 
 ## Don't want to hand-write YAML? Use the AI setup assistant
 Open **`/setup`** in a browser. Paste an Anthropic API key (used only in your

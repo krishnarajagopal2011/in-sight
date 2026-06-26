@@ -1,0 +1,16 @@
+# Your parallel projects + top tasks for the Projects screen.
+# Used when dverse.provider == 'local' (the default) — no account needed.
+# Copy to projects.yaml, or use the /setup assistant, and edit. (dVerse users can
+# instead set dverse.provider: dverse in config.yaml to sync live from that portal.)
+
+projects:               # one card per parallel project, each with its next move
+  - {title: "Launch the new website", next_action: "Finish the landing page",
+     status: ACTIVE, pct: 40}
+  - {title: "Q3 fundraising", next_action: "Send 5 investor updates",
+     status: ACTIVE, pct: 20}
+  - {title: "Hire a designer", next_action: "Shortlist candidates",
+     status: ACTIVE, pct: 0}
+
+tasks:                  # your top priorities right now (the #1 becomes "Do this next")
+  - {title: "Reply to the partnership email", priority: High, goal: "Launch the new website"}
+  - {title: "Review this week's analytics", priority: Normal, goal: "Q3 fundraising"}

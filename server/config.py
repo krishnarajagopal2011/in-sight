@@ -19,7 +19,7 @@ WEB_DIR = ROOT / "web"
 DATA_DIR = ROOT / "data"
 
 # knowledge/<name>.yaml is merged into config under the top-level key <name>.
-KNOWLEDGE_FILES = ["fitness", "food", "house", "travel", "health"]
+KNOWLEDGE_FILES = ["projects", "fitness", "food", "house", "travel", "health"]
 
 # Secrets store — a gitignored .env on the device (the local equivalent of a
 # Vercel/Supabase env-var store). Loaded into the environment at startup, so a key
@@ -77,6 +77,7 @@ def load_config() -> dict[str, Any]:
                 cfg[name] = yaml.safe_load(fh) or {}
 
     cfg.setdefault("dverse", {})
+    cfg.setdefault("projects", {})
     cfg.setdefault("fitness", {})
     cfg.setdefault("food", {})
     cfg.setdefault("travel", {})

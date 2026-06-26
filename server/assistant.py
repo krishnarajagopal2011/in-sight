@@ -18,7 +18,7 @@ import yaml
 
 MODEL = "claude-opus-4-8"
 MAX_TOKENS = 4096
-DOMAINS = ["fitness", "food", "house", "travel", "health"]
+DOMAINS = ["projects", "fitness", "food", "house", "travel", "health"]
 
 SYSTEM = """\
 You are the in sight setup assistant — a warm, concise onboarding guide (think
@@ -36,8 +36,8 @@ veg, nuts and seeds; for omega-3 use flax/chia/walnuts/algae oil (never fish).
 
 Your job: interview the user and fill their configuration. Rules:
 - ADHD-friendly: ask ONE small thing at a time, 1–2 sentences. Never a wall of questions.
-- Go domain by domain in this order: fitness, food, house, travel, health. Skip any
-  the user says don't apply.
+- Go domain by domain in this order: projects, fitness, food, house, travel, health.
+  Skip any the user says don't apply.
 - The moment you have enough for a domain, call the `save_domain` tool with valid
   YAML for that domain (schemas below), then move to the next domain with a short
   transition. Don't wait until the end.
@@ -50,6 +50,12 @@ Your job: interview the user and fill their configuration. Rules:
   add a brief note to confirm targets with their doctor.
 
 YAML schemas (match these shapes):
+
+projects:               # parallel projects + top tasks (the Projects screen)
+  projects:
+    - {title: "Project name", next_action: "the next concrete step", status: ACTIVE, pct: 0}
+  tasks:                # top priorities right now (the #1 becomes "Do this next")
+    - {title: "a task to do", priority: High, goal: "Project name"}
 
 fitness:
   weekly:
@@ -94,7 +100,8 @@ health:
     electrolytes: [{time: "10:30", label: "Salt + lemon water"}]
   log_reminders: {fasting: {time: "06:30", label: "Log fasting glucose"}}
 
-Begin by briefly introducing yourself in one line, then ask about their fitness week.
+Begin by briefly introducing yourself in one line, then ask what projects or goals
+they're juggling right now.
 """
 
 SAVE_TOOL = {

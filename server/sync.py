@@ -79,9 +79,17 @@ def sync_life(cfg: dict) -> bool:
 
 
 def _local_projects_payload(cfg: dict) -> dict:
-    """Build a projects snapshot from config when not using central command."""
+    """Build a projects snapshot from the editable knowledge base (no dVerse account).
+
+    Source: knowledge/projects.yaml (cfg['projects']), with legacy config
+    projects_fallback / immediate_fallback as a fallback.
+    """
+    pk = cfg.get("projects", {}) or {}
+    projects_src = pk.get("projects") or cfg.get("projects_fallback", []) or []
+    tasks_src = pk.get("tasks") or cfg.get("immediate_fallback", []) or []
+
     projects = []
-    for p in cfg.get("projects_fallback", []) or []:
+    for p in projects_src:
         projects.append(
             {
                 "title": p.get("title", "Untitled"),
@@ -90,7 +98,7 @@ def _local_projects_payload(cfg: dict) -> dict:
                 "pct": p.get("pct", 0),
                 "done": p.get("done", 0),
                 "total": p.get("total", 0),
-                "milestone": p.get("milestone"),
+                "milestone": p.get("milestone") or p.get("next_action"),
                 "milestone_status": p.get("milestone_status"),
                 "milestone_done": 0,
                 "milestone_total": 0,
@@ -108,13 +116,13 @@ def _local_projects_payload(cfg: dict) -> dict:
             "due": t.get("due"),
             "status": None,
         }
-        for t in cfg.get("immediate_fallback", []) or []
+        for t in tasks_src
     ]
-    # Mirror dverse provider: surface fallback projects as "milestones" too.
+    # Surface projects as "milestones" too (the screen's main grid).
     milestones = [
-        {"goal": p["title"], "title": p.get("milestone"), "status": p.get("milestone_status"),
-         "done": 0, "total": 0, "pct": p.get("pct", 0), "due": None}
-        for p in projects
+        {"goal": p["title"], "title": p.get("milestone") or p.get("next_action"),
+         "status": p.get("status"), "done": 0, "total": 0, "pct": p.get("pct", 0), "due": None}
+        for p in projects_src
     ]
     return {
         "source": "local",

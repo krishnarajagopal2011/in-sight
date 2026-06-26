@@ -7,27 +7,18 @@ server:
   refresh_seconds: 30          # how often the browser re-polls the API
   stale_after_seconds: 93600   # 26h — snapshot older than this shows a "stale" dot
 
-# ── Screen 1: parallel projects + immediate tasks ────────────────────────────
-# Source = dVerse central command ("What's Today"). Goals become projects;
-# your top priorities become the immediate tasks.
+# ── Screen 1: parallel projects + tasks ──────────────────────────────────────
+# Pick where the Projects screen gets its data:
+#   provider: local   → your own projects/tasks from knowledge/projects.yaml
+#                       (the default — no account needed; edit it or use /setup)
+#   provider: dverse  → sync live from a dVerse central command portal (needs an
+#                       account; set base_url/email + INSIGHT_DVERSE_PASSWORD)
 dverse:
-  provider: local              # 'dverse' (live, needs an account) or 'local' (use *_fallback below)
+  provider: local
   base_url: https://your-central-command.example.com
   email: you@example.com
   # Prefer the env var INSIGHT_DVERSE_PASSWORD over putting the password here.
   password: ""
-
-# Used when dverse.provider == 'local' (offline / no account) — sample projects.
-projects_fallback:
-  - {title: "Launch the new website", milestone: "Finish the landing page",
-     next_action: "Finish the landing page", status: ACTIVE, pct: 40}
-  - {title: "Q3 fundraising", milestone: "Send 5 investor updates",
-     next_action: "Send 5 investor updates", status: ACTIVE, pct: 20}
-  - {title: "Hire a designer", milestone: "Shortlist candidates",
-     next_action: "Shortlist candidates", status: ACTIVE, pct: 0}
-immediate_fallback:
-  - {title: "Reply to the partnership email", priority: High, goal: "Launch the new website"}
-  - {title: "Review this week's analytics", priority: Normal, goal: "Q3 fundraising"}
 
 # ── Google Calendar (appointments on the Life screen) ────────────────────────
 # Two accounts supported. Setup (one time):

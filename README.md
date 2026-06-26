@@ -1,16 +1,45 @@
-# in_sight
+# in sight
 
-An ADHD-friendly, clutter-free **kiosk display system** for Raspberry Pi 5 (4GB).
+An ADHD-friendly, clutter-free **life + work dashboard** — a wall kiosk (built for a
+Raspberry Pi 5) *and* an installable phone app, always in sync.
 
 > Built to defeat *out of sight, out of mind*. The screens never go blank, never
 > need a click, and only ever show what's relevant **right now**.
 
-Two fullscreen kiosk views, each on its own HDMI output (or its own Pi):
+Two fullscreen views:
 
 | Screen | Route | Shows |
 |--------|-------|-------|
-| **Projects** | `/projects` | Your parallel projects + the immediate tasks for each, synced from **dVerse central command** |
-| **Life** | `/life` | Today's fitness (alternates by day), tablets/supplements, the next meal + what to eat, upcoming travel, and today's house responsibilities |
+| **Projects** | `/projects` | Your parallel projects + top tasks, with a live "focus window" hint tied to food timing. Source is pluggable: your own list (default) or a dVerse central-command portal. |
+| **Life** | `/life` | A calm "next 2 hours": the next meal, today's movement, house tasks, travel, and health/remission progress — only what's relevant to the clock. |
+
+## Quickstart
+
+Runs on any machine (Mac/Linux/Pi). No accounts needed to try it.
+
+```bash
+git clone https://github.com/krishnarajagopal2011/in-sight.git
+cd in-sight
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python -m server.sync        # build the first snapshot (uses the bundled examples)
+python -m server.app         # serve on http://localhost:8137
+```
+
+Open **http://localhost:8137/projects** and **/life** — they work immediately on the
+bundled example data.
+
+**Make it yours (two options):**
+1. **AI setup assistant** — open **`/settings`**, paste your **Anthropic (Claude) API
+   key** (stored only on your device), then open **`/setup`**: an assistant interviews
+   you and fills your config (projects, fitness, food, house, travel, health). Review
+   each as a friendly form, then **Apply**.
+2. **Edit files** — copy any `knowledge/<name>.example.yaml` to `knowledge/<name>.yaml`
+   and edit. Run `python -m server.sync` to refresh.
+
+Log health readings from your phone at **`/log`**. Install the phone app via your
+browser's **Add to Home screen** (full-screen PWA). For the Pi kiosk + autostart, see
+[Quick start (on the Pi)](#quick-start-on-the-pi) below.
 
 ## How it works
 
