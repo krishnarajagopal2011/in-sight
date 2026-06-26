@@ -1,0 +1,17 @@
+[Unit]
+Description=in_sight Chromium kiosk — Projects view
+After=insight-server.service graphical.target
+Wants=insight-server.service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/opt/in_sight/scripts/kiosk-projects.sh
+Restart=always
+RestartSec=3
+# Wayland session environment (Pi OS Bookworm, labwc/wayfire).
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+
+[Install]
+WantedBy=graphical-session.target

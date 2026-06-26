@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>in sight · Settings</title>
+  <style>
+    :root { --bg:#0f1217; --surface:#181c24; --surface-2:#1f2530; --line:#2a3240;
+            --text:#eef2f8; --muted:#8a94a6; --accent:#ffd166; --good:#6bd0a0; --hot:#ef6f6f; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:"Inter",system-ui,sans-serif;
+      max-width:640px; margin:0 auto; padding:28px 20px 60px; }
+    h1 { font-size:1.5rem; font-weight:800; margin:0 0 .2rem; }
+    .sub { color:var(--muted); font-size:.92rem; margin-bottom:1.4rem; line-height:1.45; }
+    .field { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-bottom:14px; }
+    label { font-weight:700; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .status { font-size:.78rem; font-weight:700; padding:.2em .6em; border-radius:99px; }
+    .status.set { color:var(--good); background:rgba(107,208,160,.12); }
+    .status.unset { color:var(--muted); background:var(--surface-2); }
+    input { width:100%; margin-top:10px; background:var(--surface-2); border:1px solid var(--line);
+      color:var(--text); border-radius:10px; padding:.7rem .8rem; font:inherit; }
+    input:focus { outline:2px solid var(--accent); border-color:var(--accent); }
+    .hint { color:var(--muted); font-size:.8rem; margin-top:6px; }
+    button { background:var(--accent); color:#0f1217; border:0; border-radius:10px; padding:.8rem 1.2rem;
+      font-weight:800; cursor:pointer; margin-top:6px; }
+    #status { margin-left:12px; font-weight:700; font-size:.9rem; }
+    .note { color:var(--muted); font-size:.82rem; margin-top:1.6rem; line-height:1.5;
+      border-top:1px solid var(--line); padding-top:1rem; }
+    code { background:var(--surface-2); padding:.1em .4em; border-radius:6px; }
+    a { color:var(--accent); }
+    .topnav { display:flex; gap:10px; align-items:center; margin-bottom:18px; flex-wrap:wrap; }
+    .topnav a { color:var(--muted); text-decoration:none; font-weight:700; font-size:.88rem; }
+    .topnav a:hover { color:var(--text); }
+    .topnav .kiosk { background:var(--accent); color:#0f1217; padding:.45rem .8rem; border-radius:10px; }
+    .topnav .kiosk:hover { color:#0f1217; opacity:.9; }
+    .topnav .spacer { margin-left:auto; }
+  </style>
+</head>
+<body>
+  <nav class="topnav">
+    <a href="/setup">Setup</a>
+    <a href="/settings">Settings</a>
+    <span class="spacer"></span>
+    <a class="kiosk" href="/projects">Projects ↗</a>
+    <a class="kiosk" href="/life">Right now ↗</a>
+  </nav>
+  <h1>Settings · Secrets</h1>
+  <div class="sub">Saved on this device in a private <code>config/.env</code> file (owner-only, gitignored).
+    Set once — they persist across restarts and are never typed into the chat or sent on every request.
+    Leave a field blank to keep the current value.</div>
+
+  <div id="fields"></div>
+  <button id="save">Save</button><span id="status"></span>
+
+  <div class="note">
+    🔒 Stored as plain key/value on this machine, protected by file permissions — the same trust model as
+    Vercel/Supabase env vars (the runtime can read them automatically). For access over a network, use HTTPS
+    (e.g. <code>tailscale serve</code>) so the value isn't sent in the clear. After saving, the
+    <a href="/setup">setup assistant</a> works without pasting a key.
+  </div>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    let keys = [];
+
+    async function load() {
+      const r = await fetch("/api/secrets"); const data = await r.json();
+      const box = $("#fields"); box.innerHTML = ""; keys = Object.keys(data.secrets);
+      for (const k of keys) {
+        const s = data.secrets[k];
+        const div = document.createElement("div");
+        div.className = "field";
+        div.innerHTML = `
+          <label>${s.label}
+            <span class="status ${s.set ? "set" : "unset"}">${s.set ? "✓ set" : "not set"}</span>
+          </label>
+          <input type="password" data-key="${k}" placeholder="${s.set ? "•••••••• (saved — leave blank to keep)" : "paste value"}" />`;
+        box.appendChild(div);
+      }
+    }
+
+    $("#save").addEventListener("click", async () => {
+      const body = {};
+      document.querySelectorAll("input[data-key]").forEach((i) => { if (i.value.trim()) body[i.dataset.key] = i.value.trim(); });
+      if (!Object.keys(body).length) { $("#status").textContent = "Nothing to save."; return; }
+      $("#save").disabled = true; $("#status").textContent = "Saving…";
+      try {
+        const r = await fetch("/api/secrets", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        const data = await r.json();
+        $("#status").textContent = data.ok ? `✓ Saved ${data.saved.length} secret(s)` : "⚠ Save failed";
+        $("#status").style.color = data.ok ? "var(--good)" : "var(--hot)";
+        await load();
+      } catch (e) { $("#status").textContent = "⚠ Network error"; }
+      $("#save").disabled = false;
+    });
+
+    load();
+  </script>
+</body>
+</html>

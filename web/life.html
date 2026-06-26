@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>in sight · Life</title>
+  <link rel="stylesheet" href="/static/css/kiosk.css" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#0f1217" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="in sight" />
+  <link rel="apple-touch-icon" href="/static/icon-192.png" />
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml" />
+</head>
+<body>
+  <div id="app">
+    <header class="bar">
+      <h1>Right now <span class="sub">· in sight</span><span id="dot" class="status-dot"></span></h1>
+      <div class="clock">
+        <div class="time" id="time">--:--</div>
+        <div class="date" id="date">—</div>
+      </div>
+    </header>
+
+    <!-- Standing remission progress + safety (always visible). -->
+    <div id="health-strip"></div>
+
+    <!-- Only panels relevant in the next ~2 hours are rendered here, live. -->
+    <div class="life-flow" id="flow"></div>
+  </div>
+
+  <!-- Phone-only bottom nav (hidden on the wide kiosk) -->
+  <nav class="phone-nav">
+    <a href="/life" data-path="/life">Right now</a>
+    <a href="/projects" data-path="/projects">Projects</a>
+  </nav>
+
+  <script type="module" src="/static/js/life.js"></script>
+</body>
+</html>

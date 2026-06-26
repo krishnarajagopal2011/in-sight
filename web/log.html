@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>in_sight · Log</title>
+  <style>
+    :root { --bg:#0f1217; --surface:#181c24; --surface-2:#1f2530; --line:#2a3240;
+            --text:#eef2f8; --muted:#8a94a6; --accent:#ffd166; --good:#6bd0a0; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); padding:18px 16px 60px;
+      font-family:"Inter",system-ui,-apple-system,sans-serif; -webkit-font-smoothing:antialiased; }
+    h1 { font-size:1.5rem; font-weight:800; margin:.2rem 0 .1rem; }
+    .sub { color:var(--muted); font-size:.9rem; margin-bottom:1.2rem; }
+    form { display:flex; flex-direction:column; gap:1rem; }
+    label { display:flex; flex-direction:column; gap:.35rem; font-weight:600; font-size:.95rem; }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    input, select, textarea {
+      background:var(--surface-2); border:1px solid var(--line); color:var(--text);
+      border-radius:12px; padding:.85rem .9rem; font-size:1.1rem; font-family:inherit; width:100%;
+    }
+    input:focus, select:focus, textarea:focus { outline:2px solid var(--accent); border-color:var(--accent); }
+    .hint { color:var(--muted); font-weight:500; font-size:.78rem; }
+    button { background:var(--accent); color:#0f1217; border:0; border-radius:14px;
+      padding:1.05rem; font-size:1.15rem; font-weight:800; margin-top:.4rem; }
+    button:active { opacity:.85; }
+    .group { background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:1rem 1.1rem; }
+    .group h2 { font-size:.8rem; text-transform:uppercase; letter-spacing:.1em; color:var(--accent);
+      margin:0 0 .8rem; font-weight:700; }
+    #toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
+      background:var(--good); color:#0f1217; font-weight:800; padding:.9rem 1.4rem; border-radius:99px;
+      opacity:0; transition:opacity .25s; pointer-events:none; }
+    #toast.show { opacity:1; }
+    table { width:100%; border-collapse:collapse; font-size:.85rem; margin-top:.4rem; }
+    th, td { text-align:left; padding:.4rem .3rem; border-bottom:1px solid var(--line); color:var(--muted); }
+    th { color:var(--text); }
+    .note { color:var(--muted); font-size:.8rem; margin-top:1.4rem; line-height:1.4; }
+  </style>
+</head>
+<body>
+  <h1>Log a reading 🩸</h1>
+  <div class="sub">Tap what you have — leave the rest blank.</div>
+
+  <form id="f">
+    <label>Date
+      <input type="date" name="date" id="date" />
+    </label>
+
+    <div class="group">
+      <h2>Glucose (mg/dL)</h2>
+      <div class="row">
+        <label>Fasting<input inputmode="decimal" name="fasting_glucose" placeholder="e.g. 105" /></label>
+        <label>2 h post-meal<input inputmode="decimal" name="post_meal_glucose" placeholder="e.g. 138" /></label>
+      </div>
+      <label style="margin-top:1rem">After which meal?
+        <select name="post_meal_label">
+          <option value="">—</option>
+          <option>Breakfast</option><option>Lunch</option><option>Dinner</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="group">
+      <h2>Body</h2>
+      <div class="row">
+        <label>Weight (kg)<input inputmode="decimal" name="weight_kg" placeholder="e.g. 88.4" /></label>
+        <label>Waist (cm)<input inputmode="decimal" name="waist_cm" placeholder="e.g. 96" /></label>
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Periodic</h2>
+      <div class="row">
+        <label>HbA1c (%)<input inputmode="decimal" name="hba1c_pct" placeholder="e.g. 7.8" /></label>
+        <label>Ketones (mmol)<input inputmode="decimal" name="ketones" placeholder="e.g. 0.4" /></label>
+      </div>
+      <label style="margin-top:1rem">Notes
+        <textarea name="notes" rows="2" placeholder="how you felt, hypo, etc."></textarea>
+      </label>
+    </div>
+
+    <button type="submit">Save reading</button>
+  </form>
+
+  <div class="group" style="margin-top:1.6rem">
+    <h2>Recent</h2>
+    <table id="recent"><tbody></tbody></table>
+  </div>
+
+  <div class="note">⚠️ Not medical advice. If you take glucose-lowering medication and feel
+    hypo (shaking, sweating, confusion) treat with 15 g fast sugar; for nausea/vomiting/fruity
+    breath, seek emergency care even if glucose looks normal.</div>
+
+  <div id="toast">Saved ✓</div>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    $("#date").value = new Date().toISOString().slice(0, 10);
+
+    function toast(msg) {
+      const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 1800);
+    }
+
+    async function loadRecent() {
+      try {
+        const r = await fetch("/api/readings"); const { readings } = await r.json();
+        const rows = readings.map((x) => {
+          const bits = [];
+          if (x.fasting_glucose != null) bits.push(`F ${x.fasting_glucose}`);
+          if (x.post_meal_glucose != null) bits.push(`2h ${x.post_meal_glucose}`);
+          if (x.weight_kg != null) bits.push(`${x.weight_kg}kg`);
+          if (x.hba1c_pct != null) bits.push(`A1c ${x.hba1c_pct}`);
+          return `<tr><td>${x.date}</td><td>${bits.join(" · ") || "—"}</td></tr>`;
+        }).join("");
+        $("#recent tbody").innerHTML = rows || `<tr><td colspan="2">No readings yet.</td></tr>`;
+      } catch (e) { /* offline — ignore */ }
+    }
+
+    $("#f").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target).entries());
+      try {
+        const r = await fetch("/api/log", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        if (!r.ok) throw new Error();
+        toast("Saved ✓");
+        // keep the date, clear the numbers
+        e.target.reset(); $("#date").value = data.date;
+        loadRecent();
+      } catch (err) { toast("Couldn't save"); }
+    });
+
+    loadRecent();
+  </script>
+</body>
+</html>

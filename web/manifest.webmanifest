@@ -1,0 +1,22 @@
+{
+  "name": "in sight",
+  "short_name": "in sight",
+  "description": "Your projects, tasks, meals and day — always in sight.",
+  "start_url": "/life",
+  "scope": "/",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#0f1217",
+  "theme_color": "#0f1217",
+  "icons": [
+    { "src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/static/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/static/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ],
+  "shortcuts": [
+    { "name": "Right now", "short_name": "Life", "url": "/life" },
+    { "name": "Projects",  "short_name": "Projects", "url": "/projects" }
+  ]
+}

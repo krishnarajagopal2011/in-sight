@@ -1,0 +1,217 @@
+"""Life-screen engine: compute today's plan from the knowledge base.
+
+Consumes the editable knowledge/*.yaml files (merged into cfg by config.py):
+  fitness  -> today's sessions
+  food     -> next meal, tonight's dal soak, daily macro totals, supplements
+  house    -> today's chores grouped by time of day (daily + weekly + monthly)
+  travel   -> upcoming trips
+
+Everything here is pure: given a date it returns a plan. The browser then picks
+the "next meal right now" and "is it past soak time" live, so the screen stays
+current to the minute without re-running sync.
+"""
+from __future__ import annotations
+
+import calendar
+import datetime as dt
+from typing import Any
+
+WEEKDAYS = [
+    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+]
+_ORDINALS = {"first": 0, "second": 1, "third": 2, "fourth": 3, "last": -1}
+
+
+def _weekday_key(d: dt.date) -> str:
+    return WEEKDAYS[d.weekday()]
+
+
+# ── Fitness ──────────────────────────────────────────────────────────────────
+def todays_fitness(cfg: dict[str, Any], d: dt.date) -> list[dict[str, Any]]:
+    weekly = (cfg.get("fitness", {}) or {}).get("weekly", {}) or {}
+    items = []
+    for s in weekly.get(_weekday_key(d), []) or []:
+        start, end = s.get("start", ""), s.get("end", "")
+        items.append(
+            {
+                "name": s.get("name", "Session"),
+                "start": start,
+                "end": end,
+                "time_range": f"{start}–{end}" if start and end else (start or ""),
+                "detail": s.get("detail", ""),
+            }
+        )
+    items.sort(key=lambda x: str(x.get("start", "99:99")))
+    return items
+
+
+# ── Food ─────────────────────────────────────────────────────────────────────
+def food_today(cfg: dict[str, Any], d: dt.date) -> dict[str, Any]:
+    food = cfg.get("food", {}) or {}
+    health = cfg.get("health", {}) or {}
+    phase = health.get("phase", 4)
+
+    # Phase 1 = intensive kickstart (~1200 kcal). But on "creative days" not in
+    # kickstart_days, fall back to the ~150g maintenance plan to protect focus.
+    kickstart = food.get("kickstart", {}) or {}
+    kickstart_days = health.get("kickstart_days", []) or []
+    use_kickstart = (
+        phase == 1
+        and bool(kickstart.get("meals"))
+        and (not kickstart_days or _weekday_key(d) in kickstart_days)
+    )
+    if use_kickstart:
+        day = kickstart
+        targets_override = kickstart.get("targets")
+    else:
+        days = food.get("days", {}) or {}
+        wk = _weekday_key(d)
+        day = days.get(wk, {}) or {}
+        # Auto-fill any day with no meals from the days that DO have them — cycling
+        # through them for variety — so every day shows a plan even if only a few
+        # were entered. (Non-destructive: derived at read time, not written to file.)
+        if not (day.get("meals") or []):
+            filled = [k for k in WEEKDAYS if (days.get(k, {}) or {}).get("meals")]
+            if filled:
+                day = days.get(filled[WEEKDAYS.index(wk) % len(filled)], {}) or {}
+        targets_override = None
+
+    meals = list(day.get("meals", []) or [])
+    meals.sort(key=lambda m: str(m.get("time", "99:99")))
+
+    totals = {"protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "calories": 0}
+    for m in meals:
+        for k in totals:
+            totals[k] += int(m.get(k, 0) or 0)
+
+    return {
+        "targets": targets_override or food.get("targets", {}) or {},
+        "totals": totals,
+        "phase": phase,
+        "kickstart": use_kickstart,
+        "soak_by": food.get("soak_by", "19:00"),
+        "soak_tonight": day.get("soak_tonight", ""),
+        "prep_anchor": food.get("prep_anchor", ""),
+        "supplements": food.get("daily_supplements", []) or [],
+        "guidance": food.get("guidance", []) or [],
+        "meals": meals,
+    }
+
+
+# ── House ────────────────────────────────────────────────────────────────────
+def _monthly_due(item: dict[str, Any], d: dt.date) -> bool:
+    when = str(item.get("when", "")).strip().lower()
+    if when.startswith("day-"):
+        try:
+            return d.day == int(when.split("-", 1)[1])
+        except ValueError:
+            return False
+    if "-" in when:
+        ord_word, wd_word = when.split("-", 1)
+        if ord_word not in _ORDINALS or wd_word not in WEEKDAYS:
+            return False
+        target_wd = WEEKDAYS.index(wd_word)
+        # All dates in this month that fall on the target weekday.
+        ndays = calendar.monthrange(d.year, d.month)[1]
+        matches = [
+            day for day in range(1, ndays + 1)
+            if dt.date(d.year, d.month, day).weekday() == target_wd
+        ]
+        idx = _ORDINALS[ord_word]
+        return bool(matches) and d.day == matches[idx]
+    return False
+
+
+def todays_house(cfg: dict[str, Any], d: dt.date) -> dict[str, Any]:
+    house = cfg.get("house", {}) or {}
+    sections_meta = house.get("sections", []) or [
+        {"key": "early_morning", "label": "Early morning"},
+        {"key": "afternoon_evening", "label": "Afternoon – evening"},
+        {"key": "night", "label": "Night"},
+    ]
+    wk = _weekday_key(d)
+    bucket: dict[str, list[str]] = {s["key"]: [] for s in sections_meta}
+
+    def add(section: str, tasks: Any) -> None:
+        if section not in bucket:
+            bucket[section] = []
+        for t in tasks or []:
+            if t not in bucket[section]:
+                bucket[section].append(t)
+
+    # daily (only on configured working days)
+    daily_days = house.get("daily_days", WEEKDAYS)
+    if wk in daily_days:
+        for section, tasks in (house.get("daily", {}) or {}).items():
+            add(section, tasks)
+    # weekly[today]
+    for section, tasks in ((house.get("weekly", {}) or {}).get(wk, {}) or {}).items():
+        add(section, tasks)
+    # monthly items due today
+    for item in house.get("monthly", []) or []:
+        if _monthly_due(item, d):
+            add(item.get("section", "early_morning"), [item.get("task", "")])
+
+    sections = [
+        {
+            "key": s["key"],
+            "label": s.get("label", s["key"]),
+            "from": s.get("from", "00:00"),
+            "to": s.get("to", "23:59"),
+            "tasks": bucket.get(s["key"], []),
+        }
+        for s in sections_meta
+    ]
+    total = sum(len(s["tasks"]) for s in sections)
+    return {"sections": sections, "total": total}
+
+
+# ── Travel ───────────────────────────────────────────────────────────────────
+def upcoming_travel(cfg: dict[str, Any], d: dt.date, limit: int = 3) -> list[dict[str, Any]]:
+    travel = cfg.get("travel", {}) or {}
+    trips = travel.get("trips", []) if isinstance(travel, dict) else (travel or [])
+    rows = []
+    for t in trips or []:
+        start = _as_date(t.get("start"))
+        end = _as_date(t.get("end")) or start
+        if start is None or end is None or end < d:
+            continue
+        rows.append(
+            {
+                "destination": t.get("destination", ""),
+                "start": start.isoformat(),
+                "end": end.isoformat(),
+                "days_until": (start - d).days,
+                "ongoing": start <= d <= end,
+                "note": t.get("note", ""),
+                "purpose": t.get("purpose", ""),
+            }
+        )
+    rows.sort(key=lambda r: r["start"])
+    return rows[:limit]
+
+
+# ── Assemble ─────────────────────────────────────────────────────────────────
+def build_life_payload(cfg: dict[str, Any], d: dt.date) -> dict[str, Any]:
+    return {
+        "source": "knowledge",
+        "date": d.isoformat(),
+        "weekday": d.strftime("%A"),
+        "fitness": todays_fitness(cfg, d),
+        "food": food_today(cfg, d),
+        "house": todays_house(cfg, d),
+        "travel": upcoming_travel(cfg, d),
+    }
+
+
+def _as_date(v: Any) -> dt.date | None:
+    if v is None:
+        return None
+    if isinstance(v, dt.datetime):
+        return v.date()
+    if isinstance(v, dt.date):
+        return v
+    try:
+        return dt.date.fromisoformat(str(v)[:10])
+    except ValueError:
+        return None

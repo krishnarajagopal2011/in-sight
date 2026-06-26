@@ -1,0 +1,18 @@
+[Unit]
+Description=in_sight Chromium kiosk — Life view
+After=insight-server.service graphical.target
+Wants=insight-server.service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/opt/in_sight/scripts/kiosk-life.sh
+Restart=always
+RestartSec=3
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+# Pin to the second monitor by passing a window position to the launcher.
+# Environment=INSIGHT_WINDOW_POS=1920,0
+
+[Install]
+WantedBy=graphical-session.target

@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>in sight · Setup</title>
+  <style>
+    :root { --bg:#0f1217; --surface:#181c24; --surface-2:#1f2530; --line:#2a3240;
+            --text:#eef2f8; --muted:#8a94a6; --accent:#ffd166; --good:#6bd0a0; --hot:#ef6f6f; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:"Inter",system-ui,sans-serif;
+      display:grid; grid-template-columns: 1fr 1.05fr; height:100vh; }
+    .col { display:flex; flex-direction:column; min-height:0; padding:20px; gap:14px; }
+    .col.right { border-left:1px solid var(--line); background:#0c0f14; }
+    h1 { font-size:1.4rem; font-weight:800; margin:0; }
+    h1 .dim { color:var(--muted); font-weight:600; }
+    .sub { color:var(--muted); font-size:.9rem; margin-top:-6px; }
+    .keybar { display:flex; gap:8px; }
+    input, textarea, select { background:var(--surface-2); border:1px solid var(--line); color:var(--text);
+      border-radius:8px; padding:.5rem .6rem; font:inherit; width:100%; }
+    input:focus, textarea:focus, select:focus { outline:2px solid var(--accent); border-color:var(--accent); }
+    button { background:var(--accent); color:#0f1217; border:0; border-radius:10px; padding:.7rem 1rem;
+      font-weight:800; cursor:pointer; }
+    button.ghost { background:var(--surface-2); color:var(--text); border:1px solid var(--line);
+      padding:.35rem .7rem; font-weight:700; font-size:.82rem; border-radius:8px; }
+    button:disabled { opacity:.5; cursor:default; }
+    #log { flex:1; overflow:auto; display:flex; flex-direction:column; gap:12px; padding-right:4px; }
+    .msg { padding:.7rem .9rem; border-radius:14px; max-width:90%; white-space:pre-wrap; line-height:1.4; }
+    .msg.user { background:var(--surface-2); align-self:flex-end; }
+    .msg.bot { background:var(--surface); border:1px solid var(--line); align-self:flex-start; }
+    .composer { display:flex; gap:8px; }
+    .composer input { flex:1; }
+    .section-label { text-transform:uppercase; letter-spacing:.12em; font-size:.72rem; font-weight:700; color:var(--muted); }
+    #proposals { flex:1; overflow:auto; display:flex; flex-direction:column; gap:14px; }
+    .prop { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px; }
+    .prop > .ptitle { display:flex; justify-content:space-between; align-items:baseline; }
+    .prop h3 { margin:0; font-size:1.1rem; text-transform:capitalize; }
+    .prop .psum { color:var(--muted); font-size:.85rem; margin:4px 0 10px; }
+
+    /* friendly form */
+    .group { border:1px solid var(--line); border-radius:10px; padding:8px 10px 10px; margin:8px 0; }
+    .group > .glabel { font-weight:700; font-size:.85rem; color:var(--accent); margin-bottom:6px; text-transform:capitalize; }
+    .row { display:grid; grid-template-columns: 120px 1fr; align-items:center; gap:10px; margin:6px 0; }
+    .row > .rlabel { color:var(--muted); font-size:.82rem; text-transform:capitalize; }
+    .arr { margin:6px 0; }
+    .arr > .alabel { font-weight:700; font-size:.85rem; color:var(--accent); text-transform:capitalize; margin-bottom:4px;
+      display:flex; justify-content:space-between; align-items:center; }
+    .card2 { background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin:6px 0; position:relative; }
+    .scalrow { display:flex; gap:6px; align-items:center; margin:5px 0; }
+    .scalrow input { flex:1; }
+    .rm { background:transparent; color:var(--muted); border:1px solid var(--line); border-radius:8px;
+      width:30px; height:30px; padding:0; font-size:1rem; cursor:pointer; flex:0 0 auto; }
+    .rm:hover { color:var(--hot); border-color:var(--hot); }
+    .resthint { color:var(--muted); font-size:.8rem; font-style:italic; padding:2px 0; }
+    .num { max-width:120px; }
+
+    .colhead { display:flex; align-items:center; gap:10px; }
+    .colhead .spacer { margin-left:auto; }
+    .colhead a { text-decoration:none; font-weight:700; font-size:.82rem; color:var(--muted); }
+    .colhead a.kiosk { background:var(--accent); color:#0f1217; padding:.35rem .7rem; border-radius:9px; }
+    .applybar { display:flex; gap:8px; align-items:center; }
+    #status { font-weight:700; font-size:.9rem; }
+    .empty { color:var(--muted); padding:2rem 0; text-align:center; }
+    a { color:var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="col left">
+    <h1>Set up <span class="dim">in sight</span> 🌿</h1>
+    <div class="sub">An assistant interviews you and fills your config. Review &amp; tweak it on the right, then Apply.</div>
+    <div class="keybar">
+      <input type="password" id="key" placeholder="Anthropic key — or save it once in Settings, then leave blank" />
+      <button id="start">Start</button>
+    </div>
+    <div id="log"></div>
+    <div class="composer">
+      <input id="input" placeholder="Type your answer…" disabled />
+      <button id="send" disabled>Send</button>
+    </div>
+  </div>
+
+  <div class="col right">
+    <div class="colhead">
+      <span class="section-label">Your config — tweak anything</span>
+      <span class="spacer"></span>
+      <a class="kiosk" href="/projects">Projects ↗</a>
+      <a class="kiosk" href="/life">Right now ↗</a>
+    </div>
+    <div id="proposals"><div class="empty">As the assistant figures things out, friendly editors appear here.</div></div>
+    <div class="applybar">
+      <button id="apply" disabled>Apply to in sight</button>
+      <span id="status"></span>
+    </div>
+  </div>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    let apiMessages = [];
+    const proposals = {};                 // domain -> {data, summary}
+
+    // ── chat ──────────────────────────────────────────────────────────────
+    function addMsg(role, text) {
+      const d = document.createElement("div");
+      d.className = `msg ${role === "user" ? "user" : "bot"}`;
+      d.textContent = text;
+      $("#log").appendChild(d); $("#log").scrollTop = $("#log").scrollHeight;
+    }
+    async function turn(userText) {
+      if (userText) { addMsg("user", userText); apiMessages.push({ role: "user", content: userText }); }
+      $("#send").disabled = true; $("#input").disabled = true;
+      const typing = document.createElement("div"); typing.className = "msg bot"; typing.textContent = "…";
+      $("#log").appendChild(typing); $("#log").scrollTop = $("#log").scrollHeight;
+      try {
+        const r = await fetch("/api/assistant", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: apiMessages, api_key: $("#key").value || undefined }) });
+        const data = await r.json(); typing.remove();
+        if (!data.ok) { addMsg("bot", "⚠ " + data.error); }
+        else {
+          apiMessages = data.messages;
+          if (data.reply) addMsg("bot", data.reply);
+          for (const p of data.proposals || []) {
+            if (p.data != null) proposals[p.domain] = { data: p.data, summary: p.summary || "" };
+          }
+          if ((data.proposals || []).length) renderProposals();
+        }
+      } catch (e) { typing.remove(); addMsg("bot", "⚠ Network error."); }
+      $("#send").disabled = false; $("#input").disabled = false; $("#input").focus();
+    }
+
+    // ── friendly recursive form ───────────────────────────────────────────
+    const DAYS = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
+    const TEMPLATES = {
+      meals: { name: "", time: "08:00", items: [], protein_g: 0, carbs_g: 0, fat_g: 0 },
+      trips: { destination: "", start: "", end: "", purpose: "", note: "" },
+      daily_supplements: { name: "", when: "" },
+      checkpoints: { label: "", offset_weeks: 0 },
+      sections: { key: "", label: "", from: "06:00", to: "12:00" },
+      electrolytes: { time: "10:00", label: "" },
+    };
+    const SESSION = { name: "", start: "06:00", end: "07:00", detail: "" };
+
+    const humanize = (k) => String(k).replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+    const TIME_RE = /^\d{1,2}:\d{2}$/, DATE_RE = /^\d{4}-\d{2}-\d{2}/;
+    // Keys that hold numbers with a unit → render as number inputs.
+    const NUM_KEY = /(_kg|_g|_pct|_weeks|_hours)$|^calories$|peak_hours$/;
+    const numericPart = (v) => { const m = String(v).match(/-?\d+(\.\d+)?/); return m ? Number(m[0]) : ""; };
+    const unitFor = (k) => k.endsWith("_kg") ? "kg" : k.endsWith("_pct") ? "%"
+      : k.endsWith("_g") ? "grams" : k === "calories" ? "kcal" : "";
+
+    // Render keys in a sensible order, regardless of how the model emitted them:
+    // weekdays Monday→Sunday; common fields (name, time, …) before the rest.
+    const FIELD_ORDER = ["name","destination","label","key","title","start","time","from",
+      "end","to","detail","purpose","note","items","when","offset_weeks",
+      "protein_g","carbs_g","fat_g","fiber_g","calories","soak_tonight"];
+    function orderedKeys(obj) {
+      const keys = Object.keys(obj);
+      const dayKeys = keys.filter((k) => DAYS.includes(k.toLowerCase()));
+      if (dayKeys.length >= 2) {
+        const lc = Object.fromEntries(keys.map((k) => [k.toLowerCase(), k]));
+        const days = DAYS.filter((d) => lc[d]).map((d) => lc[d]);
+        const rest = keys.filter((k) => !DAYS.includes(k.toLowerCase()));
+        return [...days, ...rest];
+      }
+      const known = [], unknown = [];
+      for (const k of keys) (FIELD_ORDER.indexOf(k) >= 0 ? known : unknown).push(k);
+      known.sort((a, b) => FIELD_ORDER.indexOf(a) - FIELD_ORDER.indexOf(b));
+      return [...known, ...unknown];
+    }
+
+    function blank(v) {
+      if (Array.isArray(v)) return [];
+      if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, blank(x)]));
+      if (typeof v === "number") return 0;
+      if (typeof v === "boolean") return false;
+      return "";
+    }
+    function template(key, arr) {
+      if (arr.length) return blank(arr[0]);
+      if (DAYS.includes(key)) return { ...SESSION };
+      if (TEMPLATES[key]) return JSON.parse(JSON.stringify(TEMPLATES[key]));
+      return "";                          // scalar list (items, guidance…)
+    }
+
+    // scalar input bound to obj[key] — widget chosen from value + key (+ parent), not key alone
+    function scalarInput(obj, key, parent) {
+      const v = obj[key];
+      const inp = document.createElement("input");
+      if (typeof v === "boolean") {
+        inp.type = "checkbox"; inp.checked = v; inp.style.width = "auto";
+        inp.onchange = () => { obj[key] = inp.checked; }; return inp;
+      }
+      // Numbers with a unit (weight_kg, protein_g, hba1c_pct, calories…): number field.
+      // The unit may be on the field (protein_g) or the parent group (weight_kg → start/target).
+      const unitKey = NUM_KEY.test(key) ? key : (NUM_KEY.test(parent || "") ? parent : "");
+      if (typeof v === "number" || unitKey) {
+        inp.type = "number"; inp.className = "num"; inp.step = "any";
+        inp.value = typeof v === "number" ? v : numericPart(v);   // "70kg" → 70
+        // Normalise the stored value now, so applying without editing saves a clean number.
+        if (typeof v !== "number") obj[key] = inp.value === "" ? null : Number(inp.value);
+        inp.placeholder = unitFor(unitKey || key);
+        inp.oninput = () => { obj[key] = inp.value === "" ? null : Number(inp.value); };
+        return inp;
+      }
+      // Strings: hint HH:MM for times, YYYY-MM-DD for dates, else nothing.
+      inp.type = "text"; inp.value = v == null ? "" : v;
+      const s = typeof v === "string" ? v.trim() : "";
+      if (TIME_RE.test(s) || (!s && /(^|_)(time|wake_time|soak_by)$/.test(key))) inp.placeholder = "HH:MM";
+      else if (DATE_RE.test(s) || (!s && /(start|end)$/.test(key))) inp.placeholder = "YYYY-MM-DD";
+      inp.oninput = () => { obj[key] = inp.value; };
+      return inp;
+    }
+
+    // render obj[key] as the right widget; rebuild() re-renders the whole card on add/remove.
+    // `parent` is the enclosing key (e.g. "weight_kg"), used to pick the right widget.
+    function field(obj, key, rebuild, parent) {
+      const v = obj[key];
+      if (Array.isArray(v)) return arraySection(humanize(key), v, key, rebuild);
+      if (v && typeof v === "object") {
+        const g = document.createElement("div"); g.className = "group";
+        g.innerHTML = `<div class="glabel">${humanize(key)}</div>`;
+        for (const k of orderedKeys(v)) g.appendChild(field(v, k, rebuild, key));
+        return g;
+      }
+      const row = document.createElement("div"); row.className = "row";
+      const lab = document.createElement("div"); lab.className = "rlabel"; lab.textContent = humanize(key);
+      row.appendChild(lab); row.appendChild(scalarInput(obj, key, parent));
+      return row;
+    }
+
+    function arraySection(label, arr, key, rebuild) {
+      const wrap = document.createElement("div"); wrap.className = "arr";
+      const head = document.createElement("div"); head.className = "alabel";
+      head.innerHTML = `<span>${label}</span>`;
+      const add = document.createElement("button"); add.className = "ghost"; add.textContent = "+ Add";
+      add.onclick = () => { arr.push(template(key, arr)); rebuild(); };
+      head.appendChild(add); wrap.appendChild(head);
+
+      if (!arr.length) {
+        const hint = document.createElement("div"); hint.className = "resthint";
+        hint.textContent = DAYS.includes(key) ? "Rest day — no sessions" : "None yet — use + Add";
+        wrap.appendChild(hint);
+      }
+      arr.forEach((item, i) => {
+        if (item && typeof item === "object") {
+          const card = document.createElement("div"); card.className = "card2";
+          for (const k of orderedKeys(item)) card.appendChild(field(item, k, rebuild, key));
+          const rm = mkRemove(() => { arr.splice(i, 1); rebuild(); });
+          rm.style.position = "absolute"; rm.style.top = "6px"; rm.style.right = "6px";
+          card.appendChild(rm); wrap.appendChild(card);
+        } else {
+          const r = document.createElement("div"); r.className = "scalrow";
+          const inp = document.createElement("input"); inp.type = "text"; inp.value = item == null ? "" : item;
+          inp.oninput = () => { arr[i] = inp.value; };
+          r.appendChild(inp); r.appendChild(mkRemove(() => { arr.splice(i, 1); rebuild(); }));
+          wrap.appendChild(r);
+        }
+      });
+      return wrap;
+    }
+    function mkRemove(onClick) {
+      const b = document.createElement("button"); b.className = "rm"; b.textContent = "×"; b.title = "Remove";
+      b.onclick = onClick; return b;
+    }
+
+    function renderProposals() {
+      const box = $("#proposals"); box.innerHTML = "";
+      const domains = Object.keys(proposals);
+      if (!domains.length) { box.innerHTML = '<div class="empty">As the assistant figures things out, friendly editors appear here.</div>'; $("#apply").disabled = true; return; }
+      for (const dom of domains) {
+        const p = proposals[dom];
+        const card = document.createElement("div"); card.className = "prop";
+        card.innerHTML = `<div class="ptitle"><h3>${humanize(dom)}</h3></div>` + (p.summary ? `<div class="psum">${p.summary}</div>` : "");
+        const formEl = document.createElement("div");
+        const rebuild = () => { formEl.innerHTML = ""; for (const k of orderedKeys(p.data)) formEl.appendChild(field(p.data, k, rebuild)); };
+        rebuild(); card.appendChild(formEl); box.appendChild(card);
+      }
+      $("#apply").disabled = false;
+    }
+
+    // ── controls ──────────────────────────────────────────────────────────
+    $("#start").addEventListener("click", () => {
+      $("#input").disabled = false; $("#send").disabled = false; $("#start").disabled = true; $("#key").disabled = true;
+      turn("Hi — help me set up in sight.");
+    });
+    $("#send").addEventListener("click", () => { const t = $("#input").value.trim(); if (!t) return; $("#input").value = ""; turn(t); });
+    $("#input").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#send").click(); });
+
+    $("#apply").addEventListener("click", async () => {
+      $("#apply").disabled = true; $("#status").textContent = "Applying…"; $("#status").style.color = "var(--muted)";
+      const payload = Object.entries(proposals).map(([domain, p]) => ({ domain, data: p.data }));
+      try {
+        const r = await fetch("/api/assistant/apply", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ proposals: payload }) });
+        const data = await r.json();
+        $("#status").textContent = data.ok ? `✓ Applied: ${data.written.join(", ")}` : `⚠ ${(data.errors || []).join("; ")}`;
+        $("#status").style.color = data.ok ? "var(--good)" : "var(--hot)";
+        // Resume the chat: if a proposal is pending (history ends in a tool result),
+        // continue so the assistant moves on to the next question.
+        const last = apiMessages[apiMessages.length - 1];
+        if (data.ok && last && last.role === "user" && !$("#input").disabled) {
+          turn();   // no user text — the assistant responds to the applied proposal
+        }
+      } catch (e) { $("#status").textContent = "⚠ Network error."; $("#status").style.color = "var(--hot)"; }
+      $("#apply").disabled = false;
+    });
+  </script>
+</body>
+</html>

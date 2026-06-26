@@ -1,0 +1,23 @@
+# Example food plan (in sight is a 100% vegan platform). Copy to food.yaml or use /setup.
+# Macros are tracked for balance but not shown on screen. Days with no meals are
+# auto-filled from the days that do have them, so one day is enough to start.
+targets: {protein_g: 120, carbs_g: 200, fat_g: 60, calories: 1800}
+soak_by: "19:00"
+daily_supplements:
+  - {name: "Vitamin B12", when: "morning"}
+  - {name: "Omega-3 (algae)", when: "with a meal"}
+guidance:
+  - "Prioritise non-starchy veg, legumes, tofu/tempeh"
+  - "Eat veg/protein before the starch"
+days:
+  monday:
+    soak_tonight: "Chickpeas for tomorrow"
+    meals:
+      - {name: "Breakfast", time: "08:00", items: ["Oats with soy milk", "Berries", "Chia"],
+         protein_g: 20, carbs_g: 45, fat_g: 10, note: "Veg first"}
+      - {name: "Lunch", time: "13:00", items: ["Lentil & veg bowl", "Tofu"],
+         protein_g: 35, carbs_g: 60, fat_g: 16}
+      - {name: "Snack", time: "16:30", items: ["Soy yoghurt", "Walnuts"],
+         protein_g: 18, carbs_g: 15, fat_g: 14}
+      - {name: "Dinner", time: "19:30", items: ["Tofu stir-fry", "Broccoli", "Quinoa"],
+         protein_g: 40, carbs_g: 60, fat_g: 16}

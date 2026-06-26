@@ -1,0 +1,294 @@
+/* in_sight kiosk styling.
+   ADHD-friendly by design:
+   - one screen, no navigation, nothing to click
+   - calm dark palette, ONE accent, muted status colours (no rainbow)
+   - large type, generous spacing, everything above the fold (no scrolling)
+   - a single bright focal element per screen = "the one thing right now"      */
+
+:root {
+  --bg:        #0f1217;
+  --surface:   #181c24;
+  --surface-2: #1f2530;
+  --line:      #2a3240;
+  --text:      #eef2f8;
+  --muted:     #8a94a6;
+  --faint:     #5b6675;
+
+  --accent:    #ffd166;   /* dVerse amber — the single highlight colour */
+  --accent-dim:#7a6634;
+
+  --good:      #6bd0a0;
+  --warn:      #f2a65a;
+  --hot:       #ef6f6f;
+
+  --radius: 20px;
+  --gap: clamp(14px, 1.6vw, 24px);
+  --pad: clamp(18px, 2.2vw, 36px);
+
+  font-size: clamp(15px, 1.15vw, 22px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  overflow: hidden;                 /* kiosk: never scroll */
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: var(--pad);
+  gap: var(--gap);
+}
+
+/* ── Phone bottom nav — hidden on the wide kiosk, shown on narrow screens ──── */
+.phone-nav { display: none; }
+
+@media (max-width: 760px) {
+  .phone-nav {
+    display: grid; grid-template-columns: 1fr 1fr;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    background: rgba(15,18,23,.96); border-top: 1px solid var(--line);
+    padding: .5rem .6rem calc(.5rem + env(safe-area-inset-bottom));
+    gap: .5rem;
+  }
+  .phone-nav a {
+    text-align: center; text-decoration: none; color: var(--muted);
+    font-weight: 800; font-size: 1rem; padding: .7rem; border-radius: 12px;
+  }
+  .phone-nav a.active { color: var(--accent); background: var(--surface-2); }
+  /* leave room for the nav bar */
+  #app { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+}
+
+/* Portrait phone: tighten paddings + let grids collapse to one column. */
+@media (max-width: 560px) {
+  :root { --pad: 16px; --gap: 12px; font-size: 15px; }
+  .bar { flex-direction: column; align-items: flex-start; gap: .2rem; }
+  .clock { text-align: left; }
+  .projects-grid, .immediate-rail,
+  .life-flow { grid-template-columns: 1fr !important; }
+  .proj-row { grid-template-columns: 1fr; }
+  .focus-state { flex-wrap: wrap; }
+  body { overflow-y: auto; }          /* phone may scroll; the kiosk never does */
+  html, body, #app { height: auto; min-height: 100vh; }
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+header.bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gap);
+}
+.bar h1 {
+  font-size: clamp(1.6rem, 3vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.bar h1 .sub { color: var(--muted); font-weight: 600; }
+.clock { text-align: right; line-height: 1.1; }
+.clock .time { font-size: clamp(1.8rem, 3.4vw, 3rem); font-weight: 800; font-variant-numeric: tabular-nums; }
+.clock .date { color: var(--muted); font-size: 1rem; font-weight: 600; }
+
+/* freshness dot: green = live, amber pulse = stale/offline */
+.status-dot {
+  display: inline-block; width: .7rem; height: .7rem; border-radius: 50%;
+  background: var(--good); margin-left: .6rem; vertical-align: middle;
+}
+.status-dot.stale { background: var(--warn); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+/* ── Generic cards / sections ───────────────────────────────────────────── */
+.section-label {
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--faint);
+  margin-bottom: .6rem;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--pad);
+}
+
+/* The single focal element. Bright, big, impossible to miss. */
+.focus {
+  background: linear-gradient(135deg, #2a2410, var(--surface));
+  border: 1px solid var(--accent-dim);
+  border-left: 6px solid var(--accent);
+}
+.focus .focus-kicker { color: var(--accent); font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; font-size: .8rem; }
+.focus .focus-title { font-size: clamp(1.5rem, 2.8vw, 2.4rem); font-weight: 800;
+  line-height: 1.15; margin-top: .4rem; }
+.focus .focus-meta { color: var(--muted); margin-top: .6rem; font-size: 1rem; }
+
+/* progress bar */
+.progress { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin-top: .8rem; }
+.progress > span { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+
+/* pills */
+.pill { display: inline-block; padding: .12em .7em; border-radius: 99px;
+  font-size: .75rem; font-weight: 700; letter-spacing: .03em; }
+.pill.high { background: rgba(239,111,111,.16); color: var(--hot); }
+.pill.normal { background: rgba(138,148,166,.16); color: var(--muted); }
+.pill.low { background: rgba(107,208,160,.14); color: var(--good); }
+.pill.prog { background: rgba(255,209,102,.14); color: var(--accent); }
+
+.empty { color: var(--faint); font-size: 1.1rem; padding: 2rem; text-align: center; }
+
+/* ── Projects screen ────────────────────────────────────────────────────── */
+.projects-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--gap);
+  min-height: 0;
+}
+.project {
+  display: flex; flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: clamp(16px, 1.8vw, 26px);
+}
+.project .pname { font-size: clamp(1.05rem, 1.5vw, 1.35rem); font-weight: 800; line-height: 1.2; }
+.project .pgoal { color: var(--accent); font-weight: 700; font-size: .72rem;
+  letter-spacing: .1em; text-transform: uppercase; margin-bottom: .4rem; }
+.project .mhead { display: flex; justify-content: space-between; gap: .6rem; align-items: flex-start; }
+.project .mfoot { margin-top: .6rem; }
+
+/* Top priorities + Waiting on you, side by side */
+.proj-row {
+  display: grid; grid-template-columns: 2fr 1fr; gap: var(--gap);
+}
+.proj-col { display: flex; flex-direction: column; gap: .6rem; min-width: 0; }
+
+.immediate-rail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: .8rem;
+}
+.task-row {
+  display: flex; align-items: center; gap: 1rem;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 14px; padding: .9rem 1.1rem;
+}
+.task-row .ttitle { font-weight: 700; font-size: 1.05rem; line-height: 1.2; }
+.task-row .tgoal { color: var(--muted); font-size: .85rem; margin-top: .2rem; }
+
+.waiting-count { color: var(--accent); font-weight: 700; font-size: 1.05rem;
+  background: var(--surface-2); border: 1px solid var(--accent-dim);
+  border-radius: 14px; padding: .9rem 1.1rem; }
+.empty.small { padding: .9rem 1.1rem; text-align: left; font-size: 1rem; }
+
+/* Focus-state band — food timing → deep work vs. quick wins */
+.focus-state {
+  display: flex; align-items: center; gap: 1rem;
+  border-radius: 14px; padding: .65rem 1.1rem; border: 1px solid var(--line);
+  background: var(--surface);
+}
+.focus-state .fs-left { display: flex; align-items: baseline; gap: .8rem; flex: 1; min-width: 0; }
+.fs-label { font-weight: 800; font-size: 1.05rem; white-space: nowrap; }
+.fs-msg { color: var(--muted); font-size: .95rem; }
+.fs-hint { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.focus-state::before { content: ""; width: .7rem; height: .7rem; border-radius: 50%; flex: 0 0 auto; }
+.focus-state.prime  { border-color: rgba(107,208,160,.4); }
+.focus-state.prime::before  { background: var(--good); }
+.focus-state.prime .fs-label, .focus-state.prime .fs-hint { color: var(--good); }
+.focus-state.dip    { border-color: rgba(239,111,111,.4); }
+.focus-state.dip::before    { background: var(--hot); }
+.focus-state.dip .fs-label, .focus-state.dip .fs-hint { color: var(--hot); }
+.focus-state.fasted { border-color: var(--accent-dim); }
+.focus-state.fasted::before { background: var(--accent); }
+.focus-state.fasted .fs-label, .focus-state.fasted .fs-hint { color: var(--accent); }
+.focus-state.steady::before { background: var(--faint); }
+.focus-state.steady .fs-hint { color: var(--muted); }
+.focus-state.winddown { border-color: var(--line); }
+.focus-state.winddown::before { background: #6aa6ff; }
+.focus-state.winddown .fs-label { color: #6aa6ff; }
+
+/* ── Life screen — "next 2 hours" adaptive flow ─────────────────────────────*/
+/* Only the panels relevant right now are rendered. The layout adapts to how
+   many there are: 1 fills the screen, a few share it as a calm grid.          */
+.life-flow {
+  flex: 1; min-height: 0;
+  display: grid; gap: var(--gap);
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  align-content: start;
+}
+.life-flow.centered { align-content: center; }
+.life-flow.single { grid-template-columns: 1fr; }
+
+.panel {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: var(--pad);
+  display: flex; flex-direction: column; min-height: 0;
+}
+/* the focus panel (the meal) gets the bright accent treatment */
+.panel.focus {
+  background: linear-gradient(135deg, #2a2410, var(--surface));
+  border-color: var(--accent-dim); border-left: 6px solid var(--accent);
+}
+/* anything happening NOW glows */
+.panel.due { border-color: var(--accent); }
+
+.panel-kicker {
+  text-transform: uppercase; letter-spacing: .12em; font-size: .8rem;
+  font-weight: 700; color: var(--faint); margin-bottom: .5rem;
+}
+.panel-kicker.hot { color: var(--accent); }
+
+.panel-title    { font-size: clamp(1.4rem, 2.4vw, 2rem); font-weight: 800; line-height: 1.15; }
+.panel-title-lg { font-size: clamp(1.9rem, 3.4vw, 3rem); font-weight: 800; line-height: 1.1; }
+.panel-time     { color: var(--accent); font-weight: 800; font-size: 1.2rem; margin-top: .15rem; }
+.panel-sub      { color: var(--muted); margin-top: .35rem; font-size: 1rem; }
+.accent { color: var(--accent); font-weight: 800; }
+
+ul.clean { list-style: none; display: flex; flex-direction: column; gap: .55rem; margin-top: .3rem; }
+ul.clean li { display: flex; align-items: center; gap: .8rem; font-size: 1.15rem; font-weight: 600; }
+ul.clean li::before {
+  content: ""; flex: 0 0 auto; width: 1.1rem; height: 1.1rem;
+  border: 2px solid var(--faint); border-radius: 6px;
+}
+ul.clean.meal-items { margin-top: .9rem; gap: .75rem; }
+ul.clean.meal-items li { font-size: clamp(1.1rem, 1.6vw, 1.45rem); }
+ul.clean.meal-items li::before { width: 1.2rem; height: 1.2rem; }
+
+.meal-note {
+  margin-top: 1rem; color: var(--accent); font-weight: 700; font-size: .95rem;
+  border-top: 1px solid var(--accent-dim); padding-top: .7rem;
+}
+
+/* Health strip — standing remission progress + safety on the Life screen */
+.health-strip {
+  display: flex; flex-wrap: wrap; gap: .6rem; align-items: stretch;
+}
+.hchip {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: .55rem .85rem; display: flex; flex-direction: column; gap: .15rem; min-width: 0;
+}
+.hchip.phase { border-color: var(--accent-dim); background: linear-gradient(135deg, #2a2410, var(--surface)); }
+.hchip-k { font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); font-weight: 700; }
+.hchip-v { font-size: 1.1rem; font-weight: 800; }
+.hchip.phase .hchip-v { color: var(--accent); }
+.hbar { height: 6px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin-top: .25rem; }
+.hbar > span { display: block; height: 100%; background: var(--good); border-radius: 99px; }
+
+.health-safety {
+  margin-top: .6rem; display: flex; gap: .8rem; align-items: baseline;
+  background: rgba(239,111,111,.08); border: 1px solid rgba(239,111,111,.3);
+  border-radius: 14px; padding: .55rem .9rem;
+}
+.safe-k { color: var(--hot); font-weight: 800; font-size: .8rem; white-space: nowrap; }
+.safe-v { color: var(--muted); font-size: .82rem; line-height: 1.3; }

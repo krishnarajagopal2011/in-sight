@@ -1,0 +1,45 @@
+# Example health config. Copy to health.yaml or use /setup.
+# ⚠️ NOT medical advice. Set your own targets and confirm any plan with your doctor.
+
+# Active phase. 1 = an intensive "kickstart" day (from food.yaml `kickstart`);
+# anything else = the normal weekly plan.  0 Prep · 1 Kickstart · 4 Maintenance
+phase: 4
+phase_start: "2099-01-01"
+
+# Optional: limit the kickstart to certain days to protect focus on the rest.
+kickstart_days: []
+
+# Fill in your own numbers (leave null to hide a progress bar).
+targets:
+  weight_kg: {start: null, target: null}
+  waist_cm:  {target: null}
+  hba1c_pct: {start: null, target: null}
+  fasting_glucose: {low: 80, high: 110}
+
+# Milestones counted from phase_start; the screen shows the next one due.
+checkpoints:
+  - {label: "Check-up", offset_weeks: 6}
+
+# Safety reminders shown only during these phases.
+safety:
+  show_in_phases: [0, 1]
+  reminders:
+    - "Carry quick sugar; know your hypo signs"
+
+# Focus / cognition: peak after waking, declining through the day; a high-protein
+# breakfast extends the peak; a carb-heavy lunch can cause a post-lunch dip.
+focus:
+  wake_time: "07:00"
+  morning_peak_hours: 5
+  breakfast_protein_threshold_g: 30
+  breakfast_extends_to: "14:00"
+  lunch_carb_dip_threshold_g: 60
+  post_lunch_dip_after_min: 30
+  post_lunch_dip_dur_min: 90
+  electrolytes:
+    - {time: "10:30", label: "Water + pinch of salt"}
+
+log_reminders:
+  fasting: {time: "07:00", label: "Log fasting glucose"}
+  post_meal_after_min: 120
+  main_meals: ["Breakfast", "Lunch", "Dinner"]

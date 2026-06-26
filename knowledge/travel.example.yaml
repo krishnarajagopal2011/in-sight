@@ -1,0 +1,5 @@
+# Example upcoming travel. Copy to travel.yaml or use /setup.
+# Past trips (end before today) are hidden automatically. Dates are YYYY-MM-DD.
+trips:
+  - {destination: "Sample City", start: "2099-01-10", end: "2099-01-12",
+     purpose: "Conference", note: "Flight 09:40"}

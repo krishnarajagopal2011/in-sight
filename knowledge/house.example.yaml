@@ -1,0 +1,20 @@
+# Example house responsibilities. Copy to house.yaml or use /setup.
+# A day = daily (on daily_days) + weekly[that day] + any monthly item due today,
+# grouped by time-of-day sections. A section only shows while now is in from–to.
+sections:
+  - {key: early_morning,     label: "Early morning",       from: "05:00", to: "11:00"}
+  - {key: afternoon_evening, label: "Afternoon – evening", from: "12:00", to: "19:00"}
+  - {key: night,             label: "Night",               from: "19:00", to: "23:59"}
+
+daily_days: [monday, tuesday, wednesday, thursday, friday]
+daily:
+  early_morning: ["Make the bed", "Tidy the kitchen"]
+  night: ["Trash out", "Plan tomorrow"]
+
+weekly:
+  monday:    {afternoon_evening: ["Laundry"]}
+  wednesday: {afternoon_evening: ["Water plants"]}
+  saturday:  {afternoon_evening: ["Groceries", "Deep clean"]}
+
+monthly:
+  - {when: first-monday, section: early_morning, task: "Pay rent"}
