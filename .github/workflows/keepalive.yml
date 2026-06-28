@@ -1,0 +1,21 @@
+name: keep-alive
+# Pings the in_sight Render service so the free tier doesn't sleep (no ~50s cold
+# starts). Runs from this PUBLIC repo for unlimited free Actions minutes.
+# Setup: add a repo secret KEEPALIVE_URL = https://<your-app>.onrender.com/api/health
+# (that endpoint needs no login). Unset = the job no-ops.
+on:
+  schedule:
+    - cron: "*/10 * * * *"     # every 10 min (GitHub may run a little late)
+  workflow_dispatch: {}         # manual run button
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          url="${{ secrets.KEEPALIVE_URL }}"
+          if [ -z "$url" ]; then echo "KEEPALIVE_URL not set — skipping."; exit 0; fi
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 "$url" || echo "000")
+          echo "pinged -> HTTP $code"
+          [ "$code" = "200" ] || echo "::warning::keep-alive got HTTP $code"
