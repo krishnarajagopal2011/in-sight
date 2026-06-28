@@ -1,0 +1,27 @@
+# Daily schedule — practical time blocks. The "Right now" card shows the current
+# block and TWO options to pick from. A switch buffer sits between blocks.
+# Copy to schedule.yaml and edit (or build it in the setup wizard).
+
+buffer_min: 15
+
+# Optional: a recurring call/check-in every N days, counting from `since`.
+parents_call:
+  every_days: 2
+  since: "2026-01-01"
+  label: "Call family"
+
+# kinds: routine · focus (deep work) · danger (high-distraction → healthy swaps) ·
+# winddown (protects the sleep boundary).
+blocks:
+  - {name: "Deep work", start: "08:00", end: "10:00", kind: focus,
+     options: ["Most important project", "Second priority"]}
+  - {name: "Afternoon recharge", start: "14:00", end: "17:00", kind: danger,
+     community: true,
+     options: ["Walk outside", "Movement / exercise", "Call a friend", "Healthy snack"]}
+  - {name: "Wind down", start: "21:00", end: "22:00", kind: winddown,
+     options: ["Read", "Music"],
+     boundary: "Phone out of the bedroom · lights out by 22:00"}
+
+# Recurring local events — surfaced as an option in the block their time falls in.
+events:
+  - {name: "Example meetup", days: [wednesday], start: "18:00", end: "19:30", place: "Venue"}

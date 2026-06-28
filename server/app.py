@@ -13,9 +13,11 @@ from __future__ import annotations
 import copy
 import datetime as dt
 import os
+import threading
 import time
+from secrets import token_hex
 
-from flask import Flask, jsonify, redirect, request, send_from_directory
+from flask import Flask, jsonify, redirect, request, send_from_directory, session
 
 from . import assistant, config, db, focus, health, schedules, sync
 from .config import DB_PATH, KNOWLEDGE_DIR, KNOWLEDGE_FILES, WEB_DIR, load_config, server_settings
@@ -30,6 +32,64 @@ app = Flask(__name__, static_folder=None)
 
 _CFG = load_config()
 _SETTINGS = server_settings(_CFG)
+
+# ── Cloud bring-up (no-ops for the local LAN kiosk) ──────────────────────────
+# Make sure the DB/tables exist even when served by `waitress-serve server.app:app`
+# (which never calls run()), so a fresh Render disk works on first boot.
+db.init()
+
+# Optional password gate — ON only when INSIGHT_PASSWORD is set (so a public URL
+# isn't wide open). The local kiosk leaves it unset and stays frictionless.
+app.secret_key = os.environ.get("INSIGHT_SECRET_KEY") or token_hex(32)
+app.permanent_session_lifetime = dt.timedelta(days=30)
+_PASSWORD = os.environ.get("INSIGHT_PASSWORD")
+_OPEN_PATHS = {"/login", "/api/health", "/manifest.webmanifest", "/sw.js"}
+
+
+@app.before_request
+def _gate():
+    if not _PASSWORD:
+        return None                                  # auth disabled
+    p = request.path
+    if p in _OPEN_PATHS or p.startswith("/static/") or session.get("auth"):
+        return None
+    if p.startswith("/api/"):
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    return redirect("/login")
+
+
+@app.get("/login")
+def login_view():
+    return send_from_directory(WEB_DIR, "login.html")
+
+
+@app.post("/login")
+def login_post():
+    data = request.get_json(silent=True) or request.form
+    if _PASSWORD and (data.get("password") or "") == _PASSWORD:
+        session.permanent = True
+        session["auth"] = True
+        return redirect("/projects")
+    return redirect("/login?e=1")
+
+
+# In-process sync — for cloud hosts (Render) where a persistent disk can't be
+# shared with a separate cron service. Runs an initial sync then loops. Gated by
+# INSIGHT_BG_SYNC so the Pi/LAN box keeps using its own OS cron instead.
+def _bg_sync_loop():
+    interval = int(os.environ.get("INSIGHT_SYNC_SECONDS", "900"))
+    while True:
+        try:
+            cfg = load_config()
+            sync.sync_projects(cfg)
+            sync.sync_life(cfg)
+        except Exception:                            # noqa: BLE001 — never kill the thread
+            pass
+        time.sleep(interval)
+
+
+if os.environ.get("INSIGHT_BG_SYNC", "").lower() in ("1", "true", "yes"):
+    threading.Thread(target=_bg_sync_loop, name="bg-sync", daemon=True).start()
 
 
 def _snapshot_body(name: str):
@@ -72,6 +132,9 @@ def api_life():
         # Live health block (reads latest phone-logged readings + current phase).
         cfg = load_config()
         body["data"]["health"] = health.build_health(cfg, dt.date.today(), DB_PATH)
+        # Surface the top tasks here too, so the Life board has a Tasks card.
+        proj = db.get_snapshot("projects")
+        body["data"]["tasks"] = (proj["payload"].get("immediate") if proj else []) or []
     return jsonify(body), status
 
 

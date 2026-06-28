@@ -35,16 +35,23 @@ html, body {
   background: var(--bg);
   color: var(--text);
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-  overflow: hidden;                 /* kiosk: never scroll */
+  overflow-x: hidden;               /* fill the screen; scroll only when too short */
+  overflow-y: auto;
   -webkit-font-smoothing: antialiased;
 }
 
 #app {
-  height: 100vh;
+  min-height: 100vh;                /* fills a kiosk display; grows + scrolls if shorter */
   display: flex;
   flex-direction: column;
   padding: var(--pad);
   gap: var(--gap);
+}
+
+/* Big displays (27" 1440p / 4K): scale type + spacing up a touch so it stays
+   comfortable rather than looking sparse. */
+@media (min-width: 1900px) {
+  :root { font-size: 24px; --pad: 40px; --gap: 28px; }
 }
 
 /* ── Phone bottom nav — hidden on the wide kiosk, shown on narrow screens ──── */
@@ -132,6 +139,14 @@ header.bar {
 .focus .focus-title { font-size: clamp(1.5rem, 2.8vw, 2.4rem); font-weight: 800;
   line-height: 1.15; margin-top: .4rem; }
 .focus .focus-meta { color: var(--muted); margin-top: .6rem; font-size: 1rem; }
+
+/* Everything except the active block recedes — barely there, almost the bg,
+   so the one active card is the only thing that pulls the eye (ADHD focus). */
+.recede {
+  opacity: .26;
+  filter: grayscale(.7);
+  transition: opacity .5s ease, filter .5s ease;
+}
 
 /* progress bar */
 .progress { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin-top: .8rem; }

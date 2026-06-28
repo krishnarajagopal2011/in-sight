@@ -28,17 +28,27 @@ def _weekday_key(d: dt.date) -> str:
 
 # ── Fitness ──────────────────────────────────────────────────────────────────
 def todays_fitness(cfg: dict[str, Any], d: dt.date) -> list[dict[str, Any]]:
-    weekly = (cfg.get("fitness", {}) or {}).get("weekly", {}) or {}
+    fitness = cfg.get("fitness", {}) or {}
+    weekly = fitness.get("weekly", {}) or {}
+    rotations = fitness.get("rotations", {}) or {}
+    week = d.isocalendar().week
     items = []
     for s in weekly.get(_weekday_key(d), []) or []:
         start, end = s.get("start", ""), s.get("end", "")
+        detail = s.get("detail", "")
+        # A `rotate` key cycles through a named rotation list, one per week.
+        rot = s.get("rotate")
+        opts = rotations.get(rot) if rot else None
+        if opts:
+            choice = opts[week % len(opts)]
+            detail = f"{choice} · {detail}" if detail else choice
         items.append(
             {
                 "name": s.get("name", "Session"),
                 "start": start,
                 "end": end,
                 "time_range": f"{start}–{end}" if start and end else (start or ""),
-                "detail": s.get("detail", ""),
+                "detail": detail,
             }
         )
     items.sort(key=lambda x: str(x.get("start", "99:99")))
@@ -65,15 +75,21 @@ def food_today(cfg: dict[str, Any], d: dt.date) -> dict[str, Any]:
         targets_override = kickstart.get("targets")
     else:
         days = food.get("days", {}) or {}
+        variants = food.get("variants", {}) or {}
         wk = _weekday_key(d)
-        day = days.get(wk, {}) or {}
-        # Auto-fill any day with no meals from the days that DO have them — cycling
-        # through them for variety — so every day shows a plan even if only a few
-        # were entered. (Non-destructive: derived at read time, not written to file.)
-        if not (day.get("meals") or []):
-            filled = [k for k in WEEKDAYS if (days.get(k, {}) or {}).get("meals")]
-            if filled:
-                day = days.get(filled[WEEKDAYS.index(wk) % len(filled)], {}) or {}
+        if variants.get(wk):
+            # This weekday rotates through several day-plans — pick one per week.
+            vlist = variants[wk]
+            day = vlist[d.isocalendar().week % len(vlist)] or {}
+        else:
+            day = days.get(wk, {}) or {}
+            # Auto-fill any day with no meals from the days that DO have them —
+            # cycling for variety — so every day shows a plan even if only a few
+            # were entered. (Non-destructive: derived at read time, not written.)
+            if not (day.get("meals") or []):
+                filled = [k for k in WEEKDAYS if (days.get(k, {}) or {}).get("meals")]
+                if filled:
+                    day = days.get(filled[WEEKDAYS.index(wk) % len(filled)], {}) or {}
         targets_override = None
 
     meals = list(day.get("meals", []) or [])
@@ -89,6 +105,7 @@ def food_today(cfg: dict[str, Any], d: dt.date) -> dict[str, Any]:
         "totals": totals,
         "phase": phase,
         "kickstart": use_kickstart,
+        "fast": bool(day.get("fast")),
         "soak_by": food.get("soak_by", "19:00"),
         "soak_tonight": day.get("soak_tonight", ""),
         "prep_anchor": food.get("prep_anchor", ""),
@@ -166,6 +183,74 @@ def todays_house(cfg: dict[str, Any], d: dt.date) -> dict[str, Any]:
     return {"sections": sections, "total": total}
 
 
+# ── Daily schedule (time blocks → pick-one-of-two) ───────────────────────────
+def _parents_due(cfg: dict[str, Any], d: dt.date) -> str | None:
+    pc = (cfg.get("schedule", {}) or {}).get("parents_call") or {}
+    since = _as_date(pc.get("since"))
+    if since is None or d < since:
+        return None
+    every = int(pc.get("every_days", 2) or 2)
+    if every > 0 and (d - since).days % every == 0:
+        return pc.get("label", "Call parents")
+    return None
+
+
+def _todays_events(cfg: dict[str, Any], d: dt.date) -> list[dict[str, Any]]:
+    sched = cfg.get("schedule", {}) or {}
+    wk = _weekday_key(d)
+    return [
+        e for e in (sched.get("events", []) or [])
+        if wk in [str(x).lower() for x in (e.get("days") or [])]
+    ]
+
+
+def _overlaps(a0: str, a1: str, b0: str, b1: str) -> bool:
+    # HH:MM strings compare correctly lexically.
+    return a0 < (b1 or "23:59") and (b0 or "00:00") < (a1 or "23:59")
+
+
+def todays_schedule(cfg: dict[str, Any], d: dt.date) -> dict[str, Any]:
+    sched = cfg.get("schedule", {}) or {}
+    events = _todays_events(cfg, d)
+    parents = _parents_due(cfg, d)
+    rot = d.toordinal()                     # rotate non-forced options by day
+    out = []
+    for b in sched.get("blocks", []) or []:
+        start, end = b.get("start", ""), b.get("end", "")
+        pool = [str(o) for o in (b.get("options", []) or [])]
+        forced: list[str] = []
+        if b.get("community"):
+            for e in events:
+                if _overlaps(e.get("start", "00:00"), e.get("end", "23:59"), start, end):
+                    label = f"{e.get('name', 'Event')} · {e.get('start', '')}".strip(" ·")
+                    forced.append(label)
+            if parents:
+                forced.append(parents)
+        picks: list[str] = []
+        for f in forced:                    # events / parents-call come first
+            if f not in picks:
+                picks.append(f)
+            if len(picks) >= 2:
+                break
+        i = 0                               # then rotate-fill from the pool (varies daily)
+        while len(picks) < 2 and pool and i <= 2 * len(pool):
+            cand = pool[(rot + i) % len(pool)]
+            if cand not in picks:
+                picks.append(cand)
+            i += 1
+        out.append({
+            "name": b.get("name", ""),
+            "start": start,
+            "end": end,
+            "kind": b.get("kind", ""),
+            "source": b.get("source", ""),
+            "picks": picks[:2],
+            "boundary": b.get("boundary", ""),
+        })
+    out.sort(key=lambda x: str(x.get("start", "99:99")))
+    return {"blocks": out, "buffer_min": int(sched.get("buffer_min", 15) or 15)}
+
+
 # ── Travel ───────────────────────────────────────────────────────────────────
 def upcoming_travel(cfg: dict[str, Any], d: dt.date, limit: int = 3) -> list[dict[str, Any]]:
     travel = cfg.get("travel", {}) or {}
@@ -201,6 +286,7 @@ def build_life_payload(cfg: dict[str, Any], d: dt.date) -> dict[str, Any]:
         "food": food_today(cfg, d),
         "house": todays_house(cfg, d),
         "travel": upcoming_travel(cfg, d),
+        "schedule": todays_schedule(cfg, d),
     }
 
 

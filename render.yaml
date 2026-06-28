@@ -1,0 +1,37 @@
+# Render Blueprint for in_sight. Render reads this when you create a "Blueprint"
+# from the repo. It runs the Flask app via waitress on a persistent disk, with an
+# in-process sync (INSIGHT_BG_SYNC) so no separate cron service is needed.
+#
+# Secrets (passwords, API key) are marked `sync: false` — set them in the Render
+# dashboard, never in git. Your personal data (config.yaml + knowledge/*.yaml) is
+# gitignored, so deploy from a PRIVATE repo that includes it, OR add them as Render
+# "Secret Files" (see DEPLOY.md).
+services:
+  - type: web
+    name: in-sight
+    runtime: python
+    plan: starter            # "free" works too (spins down when idle, ~30s cold start)
+    buildCommand: pip install -r requirements.txt
+    startCommand: waitress-serve --host=0.0.0.0 --port=$PORT server.app:app
+    healthCheckPath: /api/health
+    disk:
+      name: insight-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: INSIGHT_DB
+        value: /var/data/insight.db          # SQLite cache lives on the persistent disk
+      - key: INSIGHT_BG_SYNC
+        value: "1"                            # run sync in-process (no cron service)
+      - key: INSIGHT_SYNC_SECONDS
+        value: "900"                          # refresh dVerse + life every 15 min
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: INSIGHT_SECRET_KEY
+        generateValue: true                   # signs the login session cookie
+      - key: INSIGHT_PASSWORD
+        sync: false                           # ← set in dashboard (your screen password)
+      - key: INSIGHT_DVERSE_PASSWORD
+        sync: false                           # ← set in dashboard
+      - key: ANTHROPIC_API_KEY
+        sync: false                           # ← set in dashboard (optional, for the wizard)

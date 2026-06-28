@@ -18,7 +18,7 @@ import yaml
 
 MODEL = "claude-opus-4-8"
 MAX_TOKENS = 4096
-DOMAINS = ["projects", "fitness", "food", "house", "travel", "health"]
+DOMAINS = ["projects", "fitness", "food", "house", "travel", "health", "schedule"]
 
 SYSTEM = """\
 You are the in sight setup assistant — a warm, concise onboarding guide (think
@@ -36,7 +36,7 @@ veg, nuts and seeds; for omega-3 use flax/chia/walnuts/algae oil (never fish).
 
 Your job: interview the user and fill their configuration. Rules:
 - ADHD-friendly: ask ONE small thing at a time, 1–2 sentences. Never a wall of questions.
-- Go domain by domain in this order: projects, fitness, food, house, travel, health.
+- Go domain by domain in this order: projects, fitness, food, house, travel, health, schedule.
   Skip any the user says don't apply.
 - The moment you have enough for a domain, call the `save_domain` tool with valid
   YAML for that domain (schemas below), then move to the next domain with a short
@@ -99,6 +99,17 @@ health:
     morning_peak_hours: 5
     electrolytes: [{time: "10:30", label: "Salt + lemon water"}]
   log_reminders: {fasting: {time: "06:30", label: "Log fasting glucose"}}
+
+schedule:               # practical daily time blocks; each shows 2 options to pick
+  buffer_min: 15        # task-switch buffer between blocks (ADHD)
+  parents_call: {every_days: 2, since: "2026-06-28", label: "Call parents"}
+  blocks:
+    - {name: "Focus block", start: "05:00", end: "06:00", kind: focus,
+       options: ["Grant writing", "Concept detailing"]}
+    - {name: "Recharge", start: "14:00", end: "18:00", kind: danger, community: true,
+       options: ["Outdoor walk in the light", "Movement / sport", "Protein snack, not junk"]}
+  events:               # recurring community events, surfaced in the matching block
+    - {name: "Event", days: [friday], start: "20:00", end: "22:00", place: "Venue"}
 
 Begin by briefly introducing yourself in one line, then ask what projects or goals
 they're juggling right now.

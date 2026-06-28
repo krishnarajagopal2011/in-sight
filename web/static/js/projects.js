@@ -24,7 +24,6 @@ function renderFocusState(f) {
   const band = el("div", `focus-state ${f.state}`);
   const left = el("div", "fs-left");
   left.appendChild(el("span", "fs-label", f.label));
-  left.appendChild(el("span", "fs-msg", f.message));
   band.appendChild(left);
   // timing hint on the right
   let hint = "";
@@ -37,14 +36,11 @@ function renderFocusState(f) {
 function render(data) {
   renderFocusState(data.focus);
 
-  // FOCUS — the single most-urgent priority. Kicker adapts to the focus state.
+  // FOCUS — the single most-urgent priority. Flat kicker, no editorializing.
   const focus = document.getElementById("focus");
   clear(focus);
   const top = (data.immediate || [])[0];
-  const st = data.focus?.state;
-  const kicker = st === "prime" ? "Peak focus — do this now"
-    : st === "dip" || st === "winddown" ? "When you're ready"
-    : "Do this next";
+  const kicker = "Do this next";
   if (top) {
     focus.appendChild(el("div", "focus-kicker", kicker));
     focus.appendChild(el("div", "focus-title", top.title));

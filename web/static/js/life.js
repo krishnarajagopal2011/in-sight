@@ -44,7 +44,6 @@ function panel(kicker, builder, opts = {}) {
 function collectEvents(data) {
   const ev = [];
 
-  const trainingNote = data.health?.training_note;
   for (const s of data.fitness || []) {
     const live = ongoing(s.start, s.end);
     ev.push({
@@ -55,7 +54,6 @@ function collectEvents(data) {
         line.append(s.name);
         p.appendChild(line);
         if (s.detail) p.appendChild(el("div", "panel-sub", s.detail));
-        if (trainingNote) p.appendChild(el("div", "meal-note", `⚕ ${trainingNote}`));
       }, { due: live }),
     });
   }
@@ -75,13 +73,14 @@ function collectEvents(data) {
     });
   }
 
+  const verb = data.food?.fast ? "Hydrate" : "Eat";   // water-fast day → hydration
   for (const m of data.food?.meals || []) {
     const due = minsUntil(m.time) <= 0;
     // Meals have no end time, so they're never "live" indefinitely — visibility
     // is governed purely by the window check (within GRACE after / WINDOW before).
     ev.push({
       start: m.time, end: null, live: false, allDay: false, sort: toMin(m.time),
-      make: (prefix) => panel(prefix ?? (due ? "Eat now" : `Eat ${relTime(m.time)}`), (p) => {
+      make: (prefix) => panel(prefix ?? (due ? `${verb} now` : `${verb} ${relTime(m.time)}`), (p) => {
         p.appendChild(el("div", "panel-title-lg", m.name));
         p.appendChild(el("div", "panel-time", m.time));
         const ul = el("ul", "clean meal-items");
@@ -184,25 +183,63 @@ function renderHealthStrip() {
     bar.appendChild(c);
   }
 
-  // Next checkpoint
-  if (h.next_checkpoint) {
+  // Next checkpoint — only on the day itself (action-step only, no future countdown).
+  if (h.next_checkpoint && h.next_checkpoint.days_until <= 0) {
     const c = el("div", "hchip");
     c.appendChild(el("span", "hchip-k", "Next"));
-    const d = h.next_checkpoint.days_until;
-    const when = d === 0 ? "today" : d === 1 ? "tomorrow" : `in ${d}d`;
-    c.appendChild(el("span", "hchip-v", `${h.next_checkpoint.label} · ${when}`));
+    c.appendChild(el("span", "hchip-v", `${h.next_checkpoint.label} · today`));
     bar.appendChild(c);
   }
 
   strip.appendChild(bar);
+}
 
-  // Safety reminders (intensive phase only)
-  if ((h.safety || []).length) {
-    const safe = el("div", "health-safety");
-    safe.appendChild(el("span", "safe-k", "⚠ Safety"));
-    safe.appendChild(el("span", "safe-v", h.safety.join("   ·   ")));
-    strip.appendChild(safe);
+// Tasks card — the top priority (from the Projects source). Not time-bound, so it
+// shows whenever there's a task. Action-step only.
+function tasksPanel(data) {
+  const tasks = data.tasks || [];
+  if (!tasks.length) return null;
+  const top = tasks[0];
+  const more = tasks.length - 1;
+  return panel("Tasks · do next", (p) => {
+    p.appendChild(el("div", "panel-title", top.title));
+    if (top.goal) p.appendChild(el("div", "panel-sub", top.goal));
+    if (more > 0) p.appendChild(el("div", "panel-sub", `+${more} more on Projects`));
+  });
+}
+
+// Block card — flips to the CURRENT schedule block and shows TWO options (pick the
+// one that pulls you). In a switch-buffer it shows the transition; otherwise null
+// so the Tasks card (dVerse top priority) takes over.
+function blockPanel(data) {
+  const sched = data.schedule;
+  if (!sched || !(sched.blocks || []).length) return null;
+  const n = nowMin();
+  const cur = sched.blocks.find((b) => b.start && b.end && toMin(b.start) <= n && n < toMin(b.end));
+  if (cur) {
+    let picks = cur.picks || [];
+    if (cur.source === "dverse") picks = (data.tasks || []).slice(0, 2).map((t) => t.title);
+    const kicker = picks.length > 1 ? `${cur.name} · pick one` : cur.name;
+    return panel(kicker, (p) => {
+      const ul = el("ul", "clean meal-items");
+      for (const opt of picks) ul.appendChild(el("li", null, opt));
+      p.appendChild(ul);
+      if (cur.boundary) p.appendChild(el("div", "meal-note", cur.boundary));
+    }, { focus: true });
   }
+  // Switch buffer: within buffer_min before the next block starts.
+  const buf = sched.buffer_min || 15;
+  const next = sched.blocks.filter((b) => toMin(b.start) > n).sort((a, b) => toMin(a.start) - toMin(b.start))[0];
+  if (next) {
+    const mins = toMin(next.start) - n;
+    if (mins > 0 && mins <= buf) {
+      return panel(`Switch · ${mins} min`, (p) => {
+        p.appendChild(el("div", "panel-title", "Task-switch buffer"));
+        p.appendChild(el("div", "panel-sub", `Next: ${next.name} at ${next.start}`));
+      });
+    }
+  }
+  return null;
 }
 
 function render() {
@@ -218,11 +255,17 @@ function render() {
   const windowed = timed.filter(inWindow).sort((a, b) => a.sort - b.sort);
   const house = housePanel(latest);
   const soak = soakPanel(latest);
+  // The current schedule block (with its 2 options) takes the Tasks slot; outside
+  // any block it falls back to the dVerse top priority.
+  const tasks = blockPanel(latest) || tasksPanel(latest);
 
+  // Category cards, skipping any with nothing relevant: Fitness/Food (windowed),
+  // House (current block), Tasks (top priority), plus soak/health nudges.
   const panels = [
     ...allDay.map((e) => e.make()),
     ...windowed.map((e) => e.make()),
     ...(house ? [house] : []),
+    ...(tasks ? [tasks] : []),
     ...(soak ? [soak] : []),
   ];
 
